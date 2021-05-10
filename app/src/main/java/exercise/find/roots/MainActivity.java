@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.sip.SipSession;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -20,6 +21,33 @@ public class MainActivity extends AppCompatActivity {
   private BroadcastReceiver broadcastReceiverForSuccess = null;
   // TODO: add any other fields to the activity as you want
 
+    protected static boolean isNumeric(String string){
+     // try {
+      //  for (int i = 0; i < string.length(); i++){
+      //    char current = string.charAt(i);
+      //    if (current < '0' || current > '9'){
+       //     return false;
+       //   }
+      //  }
+     //   return true;
+    //  }
+     // catch (RuntimeException e){
+     //   System.out.println("too long");
+    //  }
+
+     // return false;
+
+      if (string != null && !string.equals("")) {
+        try {
+          long number = Long.parseLong(string);
+          return true; // If the parsing didn't throw an exception, the string is numeric
+         //  If the string isn't a number, an exception is thrown
+        } catch (NumberFormatException e) {
+          System.out.println("String is not numeric");
+        }
+      }
+      return false;
+    }
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +64,14 @@ public class MainActivity extends AppCompatActivity {
     editTextUserInput.setEnabled(true); // set edit-text as enabled (user can input text)
     buttonCalculateRoots.setEnabled(false); // set button as disabled (user can't click)
 
+    // todo change place later - create a new activity and pass the data
+   // Intent intent = new Intent(this, SuccessActivity.class);
+   // buttonCalculateRoots.setOnClickListener(v-> {
+    //  intent.putExtra("number_of_roots", "5");
+    //  startActivity(intent);
+   // });
+
+
     // set listener on the input written by the keyboard to the edit-text
     editTextUserInput.addTextChangedListener(new TextWatcher() {
       public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
@@ -44,18 +80,40 @@ public class MainActivity extends AppCompatActivity {
         // text did change
         String newText = editTextUserInput.getText().toString();
         // todo: check conditions to decide if button should be enabled/disabled (see spec below)
+        //if (isNumeric(newText)){
+          // todo check if a calculation is running in the background
+          // if yes, button disabled, otherwise, button is enabled
+        buttonCalculateRoots.setEnabled(true);
+        //}
       }
     });
 
     // set click-listener to the button
     buttonCalculateRoots.setOnClickListener(v -> {
+      //intent.putExtra("number_of_roots", "5");
+      //startActivity(intent);
+
       Intent intentToOpenService = new Intent(MainActivity.this, CalculateRootsService.class);
       String userInputString = editTextUserInput.getText().toString();
+
       // todo: check that `userInputString` is a number. handle bad input. convert `userInputString` to long
-      long userInputLong = 0; // todo this should be the converted string from the user
+      if (!isNumeric(userInputString)){
+       System.out.println("String is not numeric");
+       return;
+      }
+      long userInputLong = Long.parseLong(userInputString);
+
+      //long userInputLong = 0; // todo this should be the converted string from the user
       intentToOpenService.putExtra("number_for_service", userInputLong);
       startService(intentToOpenService);
       // todo: set views states according to the spec (below)
+
+      // set views states after pressing the button and while the calculation didn't finish
+      progressBar.setVisibility(View.VISIBLE); // show progress bar
+      //editTextUserInput.setText(""); // cleanup text in edit-text
+      editTextUserInput.setEnabled(false); // set edit-text as disabled (user can't input text)
+      buttonCalculateRoots.setEnabled(false); // set button as disabled (user can't click)
+
     });
 
     // register a broadcast-receiver to handle action "found_roots"
