@@ -1,5 +1,6 @@
 package exercise.find.roots;
 
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -12,6 +13,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -19,24 +21,26 @@ import androidx.appcompat.app.AppCompatActivity;
 public class MainActivity extends AppCompatActivity {
 
   private BroadcastReceiver broadcastReceiverForSuccess = null;
+  private BroadcastReceiver broadcastReceiverForFailure = null;
   // TODO: add any other fields to the activity as you want
 
     protected static boolean isNumeric(String string){
-     // try {
-      //  for (int i = 0; i < string.length(); i++){
-      //    char current = string.charAt(i);
-      //    if (current < '0' || current > '9'){
-       //     return false;
-       //   }
-      //  }
-     //   return true;
-    //  }
-     // catch (RuntimeException e){
-     //   System.out.println("too long");
-    //  }
 
-     // return false;
+      try {
+        for (int i = 0; i < string.length(); i++){
+          char current = string.charAt(i);
+          if (current < 48 || current > 57){
+            return false;
+          }
+        }
+        return true;
+      }
+      catch (RuntimeException e){
+        System.out.println("too long");
+      }
 
+      return false;
+/**
       if (string != null && !string.equals("")) {
         try {
           long number = Long.parseLong(string);
@@ -47,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
         }
       }
       return false;
+ */
     }
 
   @Override
@@ -63,14 +68,6 @@ public class MainActivity extends AppCompatActivity {
     editTextUserInput.setText(""); // cleanup text in edit-text
     editTextUserInput.setEnabled(true); // set edit-text as enabled (user can input text)
     buttonCalculateRoots.setEnabled(false); // set button as disabled (user can't click)
-
-    // todo change place later - create a new activity and pass the data
-   // Intent intent = new Intent(this, SuccessActivity.class);
-   // buttonCalculateRoots.setOnClickListener(v-> {
-    //  intent.putExtra("number_of_roots", "5");
-    //  startActivity(intent);
-   // });
-
 
     // set listener on the input written by the keyboard to the edit-text
     editTextUserInput.addTextChangedListener(new TextWatcher() {
@@ -101,7 +98,15 @@ public class MainActivity extends AppCompatActivity {
        System.out.println("String is not numeric");
        return;
       }
-      long userInputLong = Long.parseLong(userInputString);
+      long userInputLong = 0;
+      try {
+        userInputLong = Long.parseLong(userInputString);
+      }
+      catch (NumberFormatException e){
+        System.out.println("Number is too big");
+        Toast.makeText(this, "calculation aborted after 20000 seconds", Toast.LENGTH_SHORT).show();
+        return;
+      }
 
       //long userInputLong = 0; // todo this should be the converted string from the user
       intentToOpenService.putExtra("number_for_service", userInputLong);
@@ -129,6 +134,24 @@ public class MainActivity extends AppCompatActivity {
            - when creating an intent to open the new-activity, pass the roots as extras to the new-activity intent
              (see for example how did we pass an extra when starting the calculation-service)
          */
+        Intent successIntent = new Intent(MainActivity.this, SuccessActivity.class);
+        Long original_number = incomingIntent.getLongExtra("original_number", 0);
+        String original_number_str = Long.toString(original_number);
+        String root1_str = Long.toString(incomingIntent.getLongExtra("root1", 0));
+        String root2_str = Long.toString(incomingIntent.getLongExtra("root2", 0));
+        String calculation_time_str = Long.toString(incomingIntent.getLongExtra("calculation_time", 0));
+
+        successIntent.putExtra("original_number", original_number_str);
+        successIntent.putExtra("root1", root1_str);
+        successIntent.putExtra("root2", root2_str);
+        successIntent.putExtra("calculation_time", calculation_time_str);
+        startActivity(successIntent);
+
+        // set UI:
+        progressBar.setVisibility(View.GONE); // hide progress
+        editTextUserInput.setText(""); // cleanup text in edit-text
+        editTextUserInput.setEnabled(true); // set edit-text as enabled (user can input text)
+        buttonCalculateRoots.setEnabled(false); // set button as disabled (user can't click)
       }
     };
     registerReceiver(broadcastReceiverForSuccess, new IntentFilter("found_roots"));
@@ -139,6 +162,25 @@ public class MainActivity extends AppCompatActivity {
      to show a Toast, use this code:
      `Toast.makeText(this, "text goes here", Toast.LENGTH_SHORT).show()`
      */
+    broadcastReceiverForFailure = new BroadcastReceiver() {
+      @Override
+      public void onReceive(Context context, Intent incomingIntent) {
+        if (incomingIntent == null || !incomingIntent.getAction().equals("stopped_calculations")) return;
+
+        String textToToast = "calculation aborted after " + incomingIntent.getLongExtra("time_until_give_up_seconds", 0) + " seconds";
+        Toast.makeText(context, textToToast, Toast.LENGTH_SHORT).show();
+        System.out.println(textToToast);
+        // todo add toast
+        // set UI:
+        progressBar.setVisibility(View.GONE); // hide progress
+        editTextUserInput.setText(""); // cleanup text in edit-text
+        editTextUserInput.setEnabled(true); // set edit-text as enabled (user can input text)
+        buttonCalculateRoots.setEnabled(false); // set button as disabled (user can't click)
+      }
+    };
+
+    registerReceiver(broadcastReceiverForFailure, new IntentFilter("stopped_calculations"));
+
   }
 
   @Override

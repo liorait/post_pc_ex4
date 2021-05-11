@@ -20,5 +20,16 @@ public class SuccessActivity extends Activity {
             TextView success = findViewById(R.id.textViewSuccess);
             success.setText(numberRoots);
         }
+        if (intent.hasExtra("original_number")){
+            String original_number_str = intent.getStringExtra("original_number");
+            String root1 = intent.getStringExtra("root1");
+            String root2 = intent.getStringExtra("root2");
+            String calculation_time = intent.getStringExtra("calculation_time");
+            TextView success = findViewById(R.id.textViewSuccess);
+            String textToSet = "original_number is: " + original_number_str + " root1: " + root1 + " root2: " + root2 +
+                    " calculation_time: " + calculation_time + "ml";
+            success.setText(textToSet);
+
+        }
     }
 }

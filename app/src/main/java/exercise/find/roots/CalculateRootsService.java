@@ -9,35 +9,28 @@ import java.util.ArrayList;
 
 public class CalculateRootsService extends IntentService {
 
-  // todo code that runs in service does not run on main thread
   boolean isFinishedCalculation = false;
-  ArrayList<Integer> roots = new ArrayList<>();
-  int count = 0; // number of roots
+  //ArrayList<Integer> roots = new ArrayList<>();
+  //int count = 0; // number of roots
   public CalculateRootsService() {
     super("CalculateRootsService");
   }
 
-  protected Pair<Integer, Integer> calculateRoots(long numberToCalculateRootsFor){
+  protected Pair<Long, Long> calculateRoots(long numberToCalculateRootsFor){
     long timeStartMs = System.currentTimeMillis();
     long endTime = timeStartMs + 20000L;
     System.out.println(timeStartMs);
     System.out.println("here " + numberToCalculateRootsFor);
-    //if (isPrime(numberToCalculateRootsFor)){
-
-    //}
-    // calculates roots
     int i = 2;
-
-    //for (int i = 2; i <= numberToCalculateRootsFor / 2; i++) {
     long currentTimeAfter = System.currentTimeMillis();
 
     while ((i <= numberToCalculateRootsFor / 2) && (currentTimeAfter < endTime)){
-      int root = (int) (numberToCalculateRootsFor / i);
+      long root = (long) (numberToCalculateRootsFor / i);
       if (numberToCalculateRootsFor % i == 0) {
-        int j = (int) (numberToCalculateRootsFor / root);
-        Pair<Integer, Integer> newPair = new Pair<>(j, root);
-        roots.add(root);
-        count++;
+        Long j = (long) (numberToCalculateRootsFor / root);
+        Pair<Long, Long> newPair = new Pair<>(j, root);
+      //  roots.add(root);
+      //  count++;
         isFinishedCalculation = true;
         return newPair;
       }
@@ -82,31 +75,58 @@ public class CalculateRootsService extends IntentService {
 
     // set timer
     long timeStartMs = System.currentTimeMillis();
-    long endTime = timeStartMs + 20000L;
+    long endTime = timeStartMs + 10000L;
     // todo start time is double
     System.out.println(timeStartMs);
     numberToCalculateRootsFor = Long.parseLong("9181531581341931811"); // todo remove
-    Pair<Integer, Integer> roots1 = calculateRoots(numberToCalculateRootsFor);
+    Pair<Long, Long> roots1 = calculateRoots(numberToCalculateRootsFor);
     System.out.println("stopped");
     long currentTimeAfter = System.currentTimeMillis();
+    boolean isSuccess = false;
 
     System.out.println(endTime);
     System.out.println(currentTimeAfter);
 
     if (currentTimeAfter > endTime ){
       System.out.println("Didn't finish calc");
+      System.out.println("Time upon giving up: " + (currentTimeAfter - timeStartMs));
+      isSuccess = false;
     }
     else{
       if (isFinishedCalculation){
         System.out.println("found the pair: " + roots1.first + " " + roots1.second);
+        isSuccess = true;
       }
       else{
         System.out.println("prime number");
         System.out.println("found the pair: " + "1" + " " + numberToCalculateRootsFor);
+        isSuccess = true;
       }
     }
 
-  // todo check not found roots because a prime number and not because lack of time
-
+    // send broadcast upon success
+    if (isSuccess) {
+      Intent successIntent = new Intent("found_roots");
+      successIntent.putExtra("original_number", numberToCalculateRootsFor);
+      if (roots1 != null) {
+        successIntent.putExtra("root1", roots1.first);
+        successIntent.putExtra("root2", roots1.second);
+      }
+      else{
+        long first = (long)1;
+        successIntent.putExtra("root1", first);
+        successIntent.putExtra("root2", numberToCalculateRootsFor);
+      }
+      successIntent.putExtra("calculation_time", (currentTimeAfter - timeStartMs));
+      sendBroadcast(successIntent);
+    }
+    else {
+      // send broadcast upon failure
+      Intent failureIntent = new Intent("stopped_calculations");
+      failureIntent.putExtra("original_number", numberToCalculateRootsFor);
+      failureIntent.putExtra("time_until_give_up_seconds", (currentTimeAfter - timeStartMs));
+      System.out.println("Failllllll");
+      sendBroadcast(failureIntent);
+    }
   }
 }
