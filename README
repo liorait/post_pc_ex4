@@ -1,0 +1,7 @@
+
+Answer for the hypotetical question:
+
+In order to make the tests run less time, we will change the testing time of the Robolectric, to 200ms, and keep the running
+time in production as is, so the changing in the testing time doesn't affect the running time in production.
+
+I pledge the highest level of ethical principles in support of academic excellence.  I ensure that all of my work reflects my own abilities and not those of someone else.
