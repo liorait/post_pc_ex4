@@ -2,6 +2,7 @@ package exercise.find.roots;
 
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 
 import junit.framework.TestCase;
 
@@ -46,7 +47,8 @@ public class MainActivityTest extends TestCase {
     Button button = mainActivity.findViewById(R.id.buttonCalculateRoots);
 
     // test: insert input to the edit text and verify that the button is enabled
-    // TODO: implement
+    inputEditText.setText("9");
+    assertTrue(button.isEnabled());
   }
 
   // TODO: add 1 or 2 more unit tests to the activity. so your "writing tests" skill won't get rusty.
@@ -70,4 +72,33 @@ public class MainActivityTest extends TestCase {
   //    create the broadcast intent (example: `new Intent("my_action_here")` ) and put extras
   //    call `RuntimeEnvironment.application.sendBroadcast()` to send the broadcast
   //    call `Shadows.shadowOf(Looper.getMainLooper()).idle();` to let the android OS time to process the broadcast the let your activity consume it
+
+  @Test
+  public void when_activityIsLaunching_then_theProgressBarIsHidden(){
+    // create a MainActivity and let it think it's currently displayed on the screen
+    MainActivity mainActivity = Robolectric.buildActivity(MainActivity.class).create().visible().get();
+
+    // find the progress bar
+    ProgressBar progressBar = mainActivity.findViewById(R.id.progressBar);
+    Button button = mainActivity.findViewById(R.id.buttonCalculateRoots);
+    EditText inputEditText = mainActivity.findViewById(R.id.editTextInputNumber);
+
+    // test: insert input to the edit text and verify that the progress bar is shown
+    inputEditText.setText("9");
+    button.performClick();
+    assertTrue(progressBar.isShown());
+  }
+
+  @Test
+  public void when_inserting_a_good_number_and_clicking_the_button_then_progress_should_be_displayed(){
+    // create a MainActivity and let it think it's currently displayed on the screen
+    MainActivity mainActivity = Robolectric.buildActivity(MainActivity.class).create().visible().get();
+
+    // find the progress bar
+    ProgressBar progressBar = mainActivity.findViewById(R.id.progressBar);
+
+    // test: insert input to the edit text and verify that the button is enabled
+    assertFalse(progressBar.isShown());
+  }
 }
+

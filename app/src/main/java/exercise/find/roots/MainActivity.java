@@ -13,22 +13,26 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import java.io.Serializable;
+import java.util.Stack;
+
 public class MainActivity extends AppCompatActivity {
 
   private BroadcastReceiver broadcastReceiverForSuccess = null;
   private BroadcastReceiver broadcastReceiverForFailure = null;
-  // TODO: add any other fields to the activity as you want
+  private boolean isWaitingForCalculation = false;
 
-    protected static boolean isNumeric(String string){
-
+  protected static boolean isNumeric(String string){
       try {
         for (int i = 0; i < string.length(); i++){
           char current = string.charAt(i);
+          // '0'=48, '9'=57
           if (current < 48 || current > 57){
             return false;
           }
@@ -38,20 +42,7 @@ public class MainActivity extends AppCompatActivity {
       catch (RuntimeException e){
         System.out.println("too long");
       }
-
       return false;
-/**
-      if (string != null && !string.equals("")) {
-        try {
-          long number = Long.parseLong(string);
-          return true; // If the parsing didn't throw an exception, the string is numeric
-         //  If the string isn't a number, an exception is thrown
-        } catch (NumberFormatException e) {
-          System.out.println("String is not numeric");
-        }
-      }
-      return false;
- */
     }
 
   @Override
@@ -76,26 +67,22 @@ public class MainActivity extends AppCompatActivity {
       public void afterTextChanged(Editable s) {
         // text did change
         String newText = editTextUserInput.getText().toString();
-        // todo: check conditions to decide if button should be enabled/disabled (see spec below)
-        //if (isNumeric(newText)){
-          // todo check if a calculation is running in the background
-          // if yes, button disabled, otherwise, button is enabled
-        buttonCalculateRoots.setEnabled(true);
-        //}
+        // check if a calculation is running in the background
+        // if yes, button disabled, otherwise, button is enabled
+        if (!isWaitingForCalculation){
+          buttonCalculateRoots.setEnabled(true);
+        }
       }
     });
 
     // set click-listener to the button
     buttonCalculateRoots.setOnClickListener(v -> {
-      //intent.putExtra("number_of_roots", "5");
-      //startActivity(intent);
-
       Intent intentToOpenService = new Intent(MainActivity.this, CalculateRootsService.class);
       String userInputString = editTextUserInput.getText().toString();
 
       // todo: check that `userInputString` is a number. handle bad input. convert `userInputString` to long
       if (!isNumeric(userInputString)){
-       System.out.println("String is not numeric");
+       //System.out.println("String is not numeric");
        return;
       }
       long userInputLong = 0;
@@ -103,22 +90,21 @@ public class MainActivity extends AppCompatActivity {
         userInputLong = Long.parseLong(userInputString);
       }
       catch (NumberFormatException e){
-        System.out.println("Number is too big");
-        Toast.makeText(this, "calculation aborted after 20000 seconds", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "calculation aborted after 20 seconds", Toast.LENGTH_SHORT).show();
         return;
       }
 
-      //long userInputLong = 0; // todo this should be the converted string from the user
+      //long userInputLong = 0; // this should be the converted string from the user
       intentToOpenService.putExtra("number_for_service", userInputLong);
       startService(intentToOpenService);
-      // todo: set views states according to the spec (below)
+      isWaitingForCalculation = true;
+      // set views states according to the spec (below)
 
       // set views states after pressing the button and while the calculation didn't finish
       progressBar.setVisibility(View.VISIBLE); // show progress bar
       //editTextUserInput.setText(""); // cleanup text in edit-text
       editTextUserInput.setEnabled(false); // set edit-text as disabled (user can't input text)
       buttonCalculateRoots.setEnabled(false); // set button as disabled (user can't click)
-
     });
 
     // register a broadcast-receiver to handle action "found_roots"
@@ -134,6 +120,7 @@ public class MainActivity extends AppCompatActivity {
            - when creating an intent to open the new-activity, pass the roots as extras to the new-activity intent
              (see for example how did we pass an extra when starting the calculation-service)
          */
+        isWaitingForCalculation = false;
         Intent successIntent = new Intent(MainActivity.this, SuccessActivity.class);
         Long original_number = incomingIntent.getLongExtra("original_number", 0);
         String original_number_str = Long.toString(original_number);
@@ -166,40 +153,73 @@ public class MainActivity extends AppCompatActivity {
       @Override
       public void onReceive(Context context, Intent incomingIntent) {
         if (incomingIntent == null || !incomingIntent.getAction().equals("stopped_calculations")) return;
-
         String textToToast = "calculation aborted after " + incomingIntent.getLongExtra("time_until_give_up_seconds", 0) + " seconds";
         Toast.makeText(context, textToToast, Toast.LENGTH_SHORT).show();
-        System.out.println(textToToast);
-        // todo add toast
+
         // set UI:
+        isWaitingForCalculation = false;
         progressBar.setVisibility(View.GONE); // hide progress
         editTextUserInput.setText(""); // cleanup text in edit-text
         editTextUserInput.setEnabled(true); // set edit-text as enabled (user can input text)
         buttonCalculateRoots.setEnabled(false); // set button as disabled (user can't click)
       }
     };
-
     registerReceiver(broadcastReceiverForFailure, new IntentFilter("stopped_calculations"));
-
   }
 
   @Override
   protected void onDestroy() {
     super.onDestroy();
-    // todo: remove ALL broadcast receivers we registered earlier in onCreate().
+    //  remove ALL broadcast receivers we registered earlier in onCreate().
     //  to remove a registered receiver, call method `this.unregisterReceiver(<receiver-to-remove>)`
+    this.unregisterReceiver(broadcastReceiverForSuccess);
+    this.unregisterReceiver(broadcastReceiverForFailure);
   }
 
   @Override
   protected void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
-    // TODO: put relevant data into bundle as you see fit
+    // put relevant data into bundle as you see fit
+    outState.putSerializable("state", this.saveState());
   }
 
   @Override
   protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
     super.onRestoreInstanceState(savedInstanceState);
-    // TODO: load data from bundle and set screen state (see spec below)
+    // load data from bundle and set screen state (see spec below)
+    Serializable saved_output = savedInstanceState.getSerializable("state");
+    MainActivity typo = new MainActivity();
+    typo.loadState(saved_output);
+
+    TextView textView = findViewById(R.id.editTextInputNumber);
+    textView.setText(((MainActivityState) saved_output).valueInText);
+  }
+
+  public Serializable saveState() {
+    // insert all data to the state, so in the future we can load from this state
+    MainActivityState state = new MainActivityState();
+    state.isWaitingForCalculation = isWaitingForCalculation;
+    //if (isWaitingForCalculation) {
+    TextView textView = findViewById(R.id.editTextInputNumber);
+    String val = textView.getText().toString();
+    state.valueInText = val;
+    return state;
+  }
+
+  public void loadState(Serializable prevState) {
+    if (!(prevState instanceof MainActivityState)) {
+      return; // ignore
+    }
+    MainActivityState casted = (MainActivityState) prevState;
+    this.isWaitingForCalculation = casted.isWaitingForCalculation;
+
+    TextView textView = findViewById(R.id.editTextInputNumber);
+    textView.setText(((MainActivityState) prevState).valueInText);
+  }
+
+  private static class MainActivityState implements Serializable {
+    private String valueInText;
+    private boolean isWaitingForCalculation;
   }
 }
 

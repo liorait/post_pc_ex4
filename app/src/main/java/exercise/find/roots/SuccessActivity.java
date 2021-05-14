@@ -7,6 +7,8 @@ import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 
+import java.util.concurrent.TimeUnit;
+
 public class SuccessActivity extends Activity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -26,10 +28,17 @@ public class SuccessActivity extends Activity {
             String root2 = intent.getStringExtra("root2");
             String calculation_time = intent.getStringExtra("calculation_time");
             TextView success = findViewById(R.id.textViewSuccess);
-            String textToSet = "original_number is: " + original_number_str + " root1: " + root1 + " root2: " + root2 +
-                    " calculation_time: " + calculation_time + "ml";
-            success.setText(textToSet);
+            long calc_time = Long.parseLong(calculation_time);
 
+            // convert to seconds
+            long seconds = TimeUnit.MILLISECONDS.toSeconds(calc_time);
+
+            //String textToSet = "original_number is: " + original_number_str + " first root: " + root1 + " second root: " + root2 +
+            //        " calculation time: " + seconds + " seconds";
+            //success.setText(textToSet);
+
+            String textToShow = original_number_str + "=" + root1 + "*" + root2 + " calculation time: " + seconds + " seconds";
+            success.setText(textToShow);
         }
     }
 }
